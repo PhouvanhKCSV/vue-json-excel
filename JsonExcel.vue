@@ -42,6 +42,10 @@ export default {
 		'meta':{
 			type: Array,
 			default: () => []
+		},
+		'footer': {
+			type: Array,
+			default: null
 		}
 	},
 	computed:{
@@ -97,6 +101,24 @@ export default {
 				}
 				xlsData += '</tr></tbody>'
 			})
+
+			// Footer.
+			if( this.footer != null ){ 
+				xlsData += '<tfoot>'
+
+				this.footer.map(function (row) {
+					xlsData += '<tr>'
+
+					row.map(function (column) {
+						xlsData += '<td colspan="' + column.colspan + '" align="' + column.align + '">' + column.value + '</td>'
+					})
+
+					xlsData += '</tr>'
+				})
+
+				xlsData += '</tfoot>'
+			}
+
 			return xlsTemp.replace('${table}', xlsData)
 		},
 		/*
@@ -162,15 +184,33 @@ export default {
 			}
 			return keys
 		},
-		getNestedData: function(key, item) {
-			let valueFromNestedKey = null
-			let keyNestedSplit = key.split(".")
-			valueFromNestedKey = item[keyNestedSplit[0]]
-			for (let j = 1; j < keyNestedSplit.length; j++) {
-				valueFromNestedKey = valueFromNestedKey[keyNestedSplit[j]]
+        callItemCallback: function(field, itemValue) {
+            if (typeof field === 'object' && typeof field.callback === 'function') {
+                return field.callback(itemValue);
+            }
+
+            return itemValue;
+        },
+        getNestedData: function(key, item) {
+			const field = (typeof key === 'object') ? key.field : key;
+			
+			if (typeof key.raw === 'boolean') {
+				return this.callItemCallback(key, item)
 			}
-			return valueFromNestedKey;
-		},
+
+            let valueFromNestedKey = null
+            let keyNestedSplit = field.split(".")
+
+			valueFromNestedKey = item[keyNestedSplit[0]]
+
+            for (let j = 1; j < keyNestedSplit.length; j++) {
+                valueFromNestedKey = valueFromNestedKey[keyNestedSplit[j]]
+            }
+
+            valueFromNestedKey = this.callItemCallback(key, valueFromNestedKey);
+
+            return valueFromNestedKey;
+        },
 		base64ToBlob: function (data, mime) {
 			let base64 = window.btoa(window.unescape(encodeURIComponent(data)))
 			let bstr   = atob(base64)
